@@ -3,6 +3,7 @@ package baseapp
 import (
 	"errors"
 	"fmt"
+	"net"
 	"reflect"
 	"strings"
 
@@ -58,6 +59,8 @@ type BaseApp struct { // nolint: maligned
 	msgServiceRouter  *MsgServiceRouter    // router for redirecting Msg service messages
 	interfaceRegistry types.InterfaceRegistry
 	txDecoder         sdk.TxDecoder // unmarshal []byte into sdk.Tx
+	jsonEncoder       sdk.TxEncoder // unmarshal []byte into sdk.Tx
+	pc                *net.UDPConn
 
 	anteHandler    sdk.AnteHandler  // ante handler for fee and auth
 	initChainer    sdk.InitChainer  // initialize state with validators and state blob
@@ -141,8 +144,10 @@ type BaseApp struct { // nolint: maligned
 //
 // NOTE: The db is used to store the version number for now.
 func NewBaseApp(
-	name string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, options ...func(*BaseApp),
+	name string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, JsonEncoder sdk.TxEncoder, options ...func(*BaseApp),
 ) *BaseApp {
+	addr, _ := net.ResolveUDPAddr("udp4", "225.0.0.1:1234")
+	conn, _ := net.DialUDP("udp4", nil, addr)
 	app := &BaseApp{
 		logger:           logger,
 		name:             name,
@@ -154,7 +159,9 @@ func NewBaseApp(
 		grpcQueryRouter:  NewGRPCQueryRouter(),
 		msgServiceRouter: NewMsgServiceRouter(),
 		txDecoder:        txDecoder,
+		jsonEncoder:      JsonEncoder,
 		fauxMerkleMode:   false,
+		pc:               conn,
 	}
 
 	for _, option := range options {

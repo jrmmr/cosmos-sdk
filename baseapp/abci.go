@@ -244,6 +244,24 @@ func (app *BaseApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 	gInfo, result, anteEvents, tx, err := app.runTx(mode, req.Tx)
 	if err != nil {
 		return sdkerrors.ResponseCheckTxWithEvents(err, gInfo.GasWanted, gInfo.GasUsed, anteEvents, app.trace)
+	} else if mode == runTxModeCheck {
+		txbyte, err := app.txDecoder(req.Tx)
+		if err != nil {
+
+			fmt.Println("Error with txDecoder : ", req.Tx)
+
+		} else {
+
+			jsonByte, err := app.jsonEncoder(txbyte)
+
+			if err != nil {
+
+				fmt.Println("Error with jsonEncoder : ", req.Tx)
+
+			} else {
+				_, _ = app.pc.Write([]byte(jsonByte))
+			}
+		}
 	}
 
 	return abci.ResponseCheckTx{
